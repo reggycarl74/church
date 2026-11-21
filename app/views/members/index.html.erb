@@ -1,0 +1,53 @@
+<% content_for :title, "Names & sections" %>
+<div class="page-head"><h1>Names &amp; sections</h1></div>
+<p class="muted">All names live on one page, grouped in sections. Paste a whole list at once (one name per line). Moving someone keeps their amounts.</p>
+
+<% @sections.each_with_index do |section, si| %>
+  <section class="card" id="section-<%= section.id %>">
+    <div class="section-head">
+      <%= form_with url: section_path(section), method: :patch, class: "inline" do |f| %>
+        <%= f.text_field :name, value: section.name, class: "section-name", "aria-label": "Section name" %>
+        <%= f.submit "Rename", class: "btn small" %>
+      <% end %>
+      <div class="row-actions">
+        <%= button_to "↑", section_path(section), method: :patch, params: { direction: "up" }, class: "btn small", disabled: si.zero? %>
+        <%= button_to "↓", section_path(section), method: :patch, params: { direction: "down" }, class: "btn small", disabled: si == @sections.size - 1 %>
+        <%= button_to "Delete section", section_path(section), method: :delete, class: "btn small danger", form: { data: { confirm: "Delete section #{section.name}?" } } %>
+      </div>
+    </div>
+
+    <ol class="member-list">
+      <% section.members.each_with_index do |m, mi| %>
+        <li class="<%= 'inactive' unless m.active %>">
+          <%= form_with model: m, class: "member-form" do |f| %>
+            <%= f.text_field :name, "aria-label": "Name" %>
+            <%= f.select :section_id, @sections.map { |s| [ s.name, s.id ] }, {}, "aria-label": "Section" %>
+            <label class="check"><%= f.check_box :active %> active</label>
+            <%= f.submit "Save", class: "btn small" %>
+          <% end %>
+          <div class="row-actions">
+            <%= button_to "↑", move_member_path(m), method: :patch, params: { direction: "up" }, class: "btn small", disabled: mi.zero? %>
+            <%= button_to "↓", move_member_path(m), method: :patch, params: { direction: "down" }, class: "btn small", disabled: mi == section.members.size - 1 %>
+            <%= button_to "✕", member_path(m), method: :delete, class: "btn small danger", title: "Remove",
+                  form: { data: { confirm: "Remove #{m.name}? If they already have amounts recorded they will be marked inactive instead." } } %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+
+    <%= form_with url: bulk_create_members_path, class: "bulk-form" do |f| %>
+      <%= f.hidden_field :section_id, value: section.id %>
+      <%= f.label :names, "Add names to #{section.name} (one per line)" %>
+      <%= f.text_area :names, rows: 3, placeholder: "Kwame Mensah\nAbena Owusu" %>
+      <%= f.submit "Add names", class: "btn" %>
+    <% end %>
+  </section>
+<% end %>
+
+<section class="card">
+  <h2><span>Add a section</span></h2>
+  <%= form_with url: sections_path, class: "inline" do |f| %>
+    <%= f.text_field :name, placeholder: "e.g. Youth, Visitors, Former members", required: true %>
+    <%= f.submit "Add section", class: "btn primary" %>
+  <% end %>
+</section>

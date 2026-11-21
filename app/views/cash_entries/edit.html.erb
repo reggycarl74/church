@@ -1,0 +1,6 @@
+<% content_for :title, "Edit entry" %>
+<div class="card narrow">
+  <h1>Edit <%= @entry.kind %></h1>
+  <%= render "cash_entries/form", entry: @entry %>
+  <p><%= link_to "← Back to cash record", cash_record_path(month: @entry.entry_on.strftime("%Y-%m")) %></p>
+</div>

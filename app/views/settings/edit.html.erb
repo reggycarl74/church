@@ -1,0 +1,21 @@
+<% content_for :title, "Settings" %>
+<div class="card narrow">
+  <h1>Settings</h1>
+  <% unless current_user.admin? %><p class="muted">Only administrators can change settings.</p><% end %>
+  <%= form_with model: setting, url: settings_path, method: :patch do |f| %>
+    <% if setting.errors.any? %><div class="flash alert"><%= setting.errors.full_messages.to_sentence %></div><% end %>
+    <fieldset <%= "disabled" unless current_user.admin? %>>
+      <label>Church / assembly name<%= f.text_field :church_name %></label>
+      <label>Collection day<%= f.select :collection_wday, Setting::WEEKDAYS.to_a %></label>
+      <label>Currency<%= f.select :currency, Setting::CURRENCIES %></label>
+      <label>LDF percentage (of tithes &amp; offerings)<%= f.number_field :ldf_percent, step: "0.01", min: 0, max: 100 %></label>
+      <label class="check"><%= f.check_box :deduct_ldf %> Deduct LDF from the cash balance (tick if the LDF money leaves the cash/bank each month)</label>
+      <%= f.submit "Save settings", class: "btn primary" %>
+    </fieldset>
+  <% end %>
+  <% if current_user.admin? %>
+    <h2 style="margin:20px -16px 12px"><span>Backup</span></h2>
+    <p class="muted">Download a complete copy of all names, amounts and cash records. Keep one each month.</p>
+    <%= link_to "Download database backup", backup_path, class: "btn" %>
+  <% end %>
+</div>

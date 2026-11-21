@@ -1,0 +1,6 @@
+<%# locals: (path_proc:) %>
+<div class="month-nav">
+  <%= link_to "‹", path_proc.call(selected_month.prev_month), class: "btn", "aria-label": "Previous month" %>
+  <strong><%= month_title(selected_month) %></strong>
+  <%= link_to "›", path_proc.call(selected_month.next_month), class: "btn", "aria-label": "Next month" %>
+</div>

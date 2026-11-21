@@ -1,0 +1,108 @@
+<% content_for :title, "Tithes & offerings — #{month_title(selected_month)}" %>
+<% sheet = @sheet; days = sheet.days %>
+<div class="page-head">
+  <div>
+    <h1>Tithes &amp; offerings</h1>
+    <p class="muted print-only"><%= setting.church_name %> — <%= @type ? @type.name : "All offering types" %> — <%= month_title(selected_month) %></p>
+  </div>
+  <%= render "shared/month_nav", path_proc: ->(d) { sheet_path(month: month_param(d), type: params[:type]) } %>
+  <div class="actions noprint">
+    <%= link_to "Export CSV", sheet_path(month: month_param(selected_month), format: :csv), class: "btn" %>
+    <button type="button" class="btn" onclick="window.print()">Print</button>
+  </div>
+</div>
+
+<div class="tabs noprint">
+  <% @types.each do |t| %>
+    <%= link_to t.name, sheet_path(month: month_param(selected_month), type: t.id), class: [ "tab", ("active" if @type == t) ] %>
+  <% end %>
+  <%= link_to "All types (summary)", sheet_path(month: month_param(selected_month), type: "all"), class: [ "tab", ("active" if sheet.summary?) ] %>
+</div>
+
+<% if @types.empty? %>
+  <p class="card">Add an offering type first under <%= link_to "Offering types", offering_types_path %>.</p>
+<% else %>
+<p class="muted noprint">
+  <% if sheet.summary? %>
+    All offering types added together (read-only). Pick a type above to enter amounts.
+  <% else %>
+    Entering <strong><%= @type.name %></strong>. Type amounts like <code>20</code> or <code>12,50</code> — they save automatically. Enter moves to the next name.
+  <% end %>
+  <span id="save-status" class="save-status"></span>
+</p>
+
+<div id="sheet" data-type-id="<%= @type&.id %>" data-upsert-url="<%= upsert_contribution_path %>" data-currency="<%= setting.currency %>">
+<% sheet.sections.each do |section| %>
+  <% members = sheet.members_of(section) %>
+  <section class="card sheet-section" data-section>
+    <h2><span><%= section.name %></span><span class="muted"><%= members.size %> names</span></h2>
+    <div class="scroll">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th class="num">#</th><th class="name">Name</th>
+            <% days.each do |d| %><th><%= day_label(d) %></th><% end %>
+            <th class="tot">Month total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% members.each_with_index do |m, i| %>
+            <tr data-row class="<%= 'inactive' unless m.active %>">
+              <td class="num"><%= i + 1 %></td>
+              <td class="name" title="<%= m.name %>"><%= m.name %><%= " (inactive)" unless m.active %></td>
+              <% days.each_with_index do |d, di| %>
+                <td>
+                  <% if sheet.summary? %>
+                    <span data-cell data-col="<%= di %>" data-cents="<%= sheet.amount(m, d) %>"><%= money_plain(sheet.amount(m, d)) %></span>
+                  <% else %>
+                    <input class="amt" inputmode="decimal" autocomplete="off" data-cell data-col="<%= di %>"
+                           data-member-id="<%= m.id %>" data-date="<%= d.iso8601 %>" data-cents="<%= sheet.amount(m, d) %>"
+                           value="<%= money_plain(sheet.amount(m, d)) %>" aria-label="<%= m.name %> <%= day_label(d) %>">
+                  <% end %>
+                </td>
+              <% end %>
+              <td class="tot" data-row-total><%= money(sheet.member_total(m)) %></td>
+            </tr>
+          <% end %>
+          <% if members.empty? %>
+            <tr><td></td><td class="name muted" colspan="<%= days.size + 2 %>">No names yet — add them under <%= link_to "Names & sections", members_path(anchor: "section-#{section.id}") %>.</td></tr>
+          <% end %>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td></td><td class="name">Weekly total</td>
+            <% days.each_with_index do |d, di| %><td data-section-col="<%= di %>"><%= money(sheet.section_day_total(section, d)) %></td><% end %>
+            <td class="tot" data-section-total><%= money(sheet.section_total(section)) %></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+<% end %>
+
+<section class="card grand">
+  <h2><span>Grand total — <%= @type ? @type.name : "all offering types" %></span><span><%= month_title(selected_month) %></span></h2>
+  <div class="scroll">
+    <table class="grid">
+      <thead><tr><th class="name">Section</th><% days.each do |d| %><th><%= day_label(d) %></th><% end %><th class="tot">Month total</th></tr></thead>
+      <tbody>
+        <% sheet.sections.each_with_index do |section, si| %>
+          <tr data-grand-row="<%= si %>">
+            <td class="name"><%= section.name %></td>
+            <% days.each_with_index do |d, di| %><td data-grand-col="<%= di %>"><%= money(sheet.section_day_total(section, d)) %></td><% end %>
+            <td class="tot" data-grand-row-total><%= money(sheet.section_total(section)) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+      <tfoot>
+        <tr data-grand-footer>
+          <td class="name">All sections</td>
+          <% days.each_with_index do |d, di| %><td data-grand-day="<%= di %>"><%= money(sheet.day_total(d)) %></td><% end %>
+          <td class="tot" data-grand-total><%= money(sheet.grand_total) %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+</div>
+<% end %>

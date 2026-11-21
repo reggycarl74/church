@@ -1,0 +1,36 @@
+<% content_for :title, "Offering types" %>
+<div class="page-head"><h1>Offering types</h1></div>
+<p class="muted">Each type gets its own tab on the tithes &amp; offerings sheet and its own row in the cash record.
+Tick “counts for LDF” for the types that make up “tithes and offerings” (LDF = <%= setting.ldf_percent.to_s("F").sub(/\.0\z/, "") %>% of them).</p>
+
+<section class="card">
+  <table class="grid">
+    <thead><tr><th class="name">Name</th><th>Counts for LDF</th><th>Active</th><th>Order</th><th></th></tr></thead>
+    <tbody>
+      <% @types.each do |t| %>
+        <% fid = dom_id(t, :form) %>
+        <tr>
+          <td class="name"><%= text_field_tag "offering_type[name]", t.name, form: fid, "aria-label": "Name" %></td>
+          <td><%= hidden_field_tag "offering_type[counts_for_ldf]", "0", form: fid, id: nil %><%= check_box_tag "offering_type[counts_for_ldf]", "1", t.counts_for_ldf, form: fid, id: nil %></td>
+          <td><%= hidden_field_tag "offering_type[active]", "0", form: fid, id: nil %><%= check_box_tag "offering_type[active]", "1", t.active, form: fid, id: nil %></td>
+          <td><%= number_field_tag "offering_type[position]", t.position, form: fid, class: "short", id: nil %></td>
+          <td class="actions-cell">
+            <%= form_with model: t, id: fid do |f| %>
+              <%= f.submit "Save", class: "btn small" %>
+            <% end %>
+            <%= button_to "Delete", offering_type_path(t), method: :delete, class: "btn small danger", form: { data: { confirm: "Delete #{t.name}?" } } %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2><span>Add an offering type</span></h2>
+  <%= form_with model: @new_type, class: "inline" do |f| %>
+    <%= f.text_field :name, placeholder: "e.g. Thanksgiving, Building fund, Welfare", required: true %>
+    <label class="check"><%= f.check_box :counts_for_ldf %> counts for LDF</label>
+    <%= f.submit "Add", class: "btn primary" %>
+  <% end %>
+</section>

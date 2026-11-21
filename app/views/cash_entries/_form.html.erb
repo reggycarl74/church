@@ -1,0 +1,22 @@
+<%# locals: (entry:) %>
+<%= form_with model: entry, class: "entry-form noprint" do |f| %>
+  <% if entry.errors.any? %><div class="flash alert"><%= entry.errors.full_messages.to_sentence %></div><% end %>
+  <%= f.hidden_field :kind %>
+  <div class="form-grid">
+    <label>Date<%= f.date_field :entry_on, required: true %></label>
+    <label>Amount<%= f.text_field :amount_text, inputmode: "decimal", required: true, placeholder: "e.g. 45,00" %></label>
+    <label class="wide">Description<%= f.text_field :description, required: true, placeholder: entry.kind == "income" ? "e.g. Loose offering (plate)" : "e.g. Hall rent November" %></label>
+    <% if entry.kind == "income" %>
+      <label>Counted as
+        <%= f.select :offering_type_id, OfferingType.active.map { |t| [ t.name, t.id ] }, include_blank: "Other income" %>
+      </label>
+    <% else %>
+      <label>Category
+        <%= f.text_field :category, list: "expense-categories", placeholder: "e.g. Rent" %>
+        <datalist id="expense-categories"><% CashEntry::EXPENSE_CATEGORIES.each do |c| %><option value="<%= c %>"><% end %></datalist>
+      </label>
+    <% end %>
+    <label>Receipt / reference<%= f.text_field :reference, placeholder: "optional" %></label>
+  </div>
+  <%= f.submit(entry.persisted? ? "Save changes" : (entry.kind == "income" ? "Add income" : "Add payment"), class: "btn primary") %>
+<% end %>

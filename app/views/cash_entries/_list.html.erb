@@ -1,0 +1,25 @@
+<%# locals: (entries:, show_type:) %>
+<% if entries.empty? %>
+  <p class="muted">Nothing recorded yet this month.</p>
+<% else %>
+  <div class="scroll">
+  <table class="grid entries">
+    <thead><tr><th class="name">Date</th><th class="name">Description</th><th class="name"><%= show_type ? "Counted as" : "Category" %></th><th>Amount</th><th class="noprint"></th></tr></thead>
+    <tbody>
+      <% entries.each do |e| %>
+        <tr>
+          <td class="name"><%= e.entry_on.strftime("%d.%m.%Y") %></td>
+          <td class="name"><%= e.description %><% if e.reference.present? %> <small class="muted">(<%= e.reference %>)</small><% end %></td>
+          <td class="name"><%= show_type ? (e.offering_type&.name || "Other income") : (e.category.presence || "Other") %></td>
+          <td><%= money(e.amount_cents) %></td>
+          <td class="noprint actions-cell">
+            <%= link_to "Edit", edit_cash_entry_path(e) %>
+            <%= button_to "Delete", cash_entry_path(e), method: :delete, class: "link-button danger", form: { data: { confirm: "Delete this entry?" } } %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+    <tfoot><tr><td class="name" colspan="3">Total</td><td><%= money(entries.sum(&:amount_cents)) %></td><td class="noprint"></td></tr></tfoot>
+  </table>
+  </div>
+<% end %>

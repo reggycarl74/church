@@ -1,0 +1,28 @@
+<% content_for :title, "Users" %>
+<div class="page-head"><h1>Users</h1></div>
+<section class="card">
+  <table class="grid">
+    <thead><tr><th class="name">Name</th><th class="name">Email</th><th>Admin</th><th></th></tr></thead>
+    <tbody>
+      <% @users.each do |u| %>
+        <tr>
+          <td class="name"><%= u.name %></td>
+          <td class="name"><%= u.email_address %></td>
+          <td><%= u.admin? ? "Yes" : "" %></td>
+          <td><%= button_to "Remove", user_path(u), method: :delete, class: "btn small danger", disabled: u == current_user, form: { data: { confirm: "Remove #{u.name}?" } } %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</section>
+<section class="card narrow">
+  <h2><span>Add a user (e.g. treasurer, financial secretary)</span></h2>
+  <%= form_with model: @user do |f| %>
+    <% if @user.errors.any? %><div class="flash alert"><%= @user.errors.full_messages.to_sentence %></div><% end %>
+    <label>Name<%= f.text_field :name, required: true %></label>
+    <label>Email<%= f.email_field :email_address, required: true %></label>
+    <label>Starting password (min. 8 characters)<%= f.password_field :password, required: true, autocomplete: "new-password" %></label>
+    <label class="check"><%= f.check_box :admin %> Administrator (can manage users and settings)</label>
+    <%= f.submit "Add user", class: "btn primary" %>
+  <% end %>
+</section>

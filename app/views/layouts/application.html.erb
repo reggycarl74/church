@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title><%= content_for(:title) || "Tithes & Offerings" %> · <%= setting.church_name %></title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <%= stylesheet_link_tag "application" %>
+  <%= javascript_include_tag "application", defer: true %>
+</head>
+<body>
+  <% if logged_in? %>
+    <header class="topbar noprint">
+      <div class="brand"><%= setting.church_name %><small>Church finance</small></div>
+      <nav>
+        <%= nav_link "Tithes & offerings", sheet_path(month: month_param(selected_month)), controller_name == "sheets" %>
+        <%= nav_link "Cash record", cash_record_path(month: month_param(selected_month)), %w[cash_records cash_entries].include?(controller_name) %>
+        <%= nav_link "Names & sections", members_path, controller_name == "members" %>
+        <%= nav_link "Offering types", offering_types_path, controller_name == "offering_types" %>
+        <%= nav_link "Settings", edit_settings_path, controller_name == "settings" %>
+        <% if current_user.admin? %><%= nav_link "Users", users_path, controller_name == "users" %><% end %>
+      </nav>
+      <div class="who">
+        <%= link_to current_user.name, password_path, title: "Change password" %>
+        <%= button_to "Log out", logout_path, method: :delete, class: "link-button" %>
+      </div>
+    </header>
+  <% end %>
+  <main>
+    <% flash.each do |type, msg| %>
+      <div class="flash <%= type %> noprint"><%= msg %></div>
+    <% end %>
+    <%= yield %>
+  </main>
+</body>
+</html>

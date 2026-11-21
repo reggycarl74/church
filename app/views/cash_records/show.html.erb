@@ -1,0 +1,132 @@
+<% content_for :title, "Cash record — #{month_title(selected_month)}" %>
+<% r = @record; s = r.summary; days = r.days; mp = month_param(selected_month) %>
+<div class="page-head">
+  <div>
+    <h1>Cash record</h1>
+    <p class="muted print-only"><%= setting.church_name %> — <%= month_title(selected_month) %></p>
+  </div>
+  <%= render "shared/month_nav", path_proc: ->(d) { cash_record_path(month: month_param(d)) } %>
+  <div class="actions noprint"><button type="button" class="btn" onclick="window.print()">Print</button></div>
+</div>
+
+<div class="cash-layout">
+<section class="card summary">
+  <h2><span>Month summary</span><span><%= month_title(selected_month) %></span></h2>
+  <table class="summary-table">
+    <tr>
+      <td>Cash brought forward
+        <small class="muted"><%= r.brought_forward_is_override? ? "entered by hand" : "closing balance of #{month_title(selected_month.prev_month)}" %></small></td>
+      <td class="<%= signed_class(s.brought_forward) %>"><%= money(s.brought_forward) %></td>
+    </tr>
+    <tr><td>+ Total receipts</td><td><%= money(s.receipts) %></td></tr>
+    <tr><td>− Total payments</td><td><%= money(s.payments) %></td></tr>
+    <% if s.deduct_ldf %>
+      <tr><td>− LDF (<%= s.ldf_percent.to_s("F").sub(/\.0\z/, "") %>%)</td><td><%= money(s.ldf) %></td></tr>
+    <% end %>
+    <tr class="strong"><td>= Closing balance <small class="muted">carried forward to <%= month_title(selected_month.next_month) %></small></td>
+      <td class="<%= signed_class(s.closing) %>"><%= money(s.closing) %></td></tr>
+  </table>
+
+  <h3>LDF</h3>
+  <table class="summary-table">
+    <tr><td>Tithes &amp; offerings received <small class="muted"><%= OfferingType.where(counts_for_ldf: true).pluck(:name).to_sentence %></small></td><td><%= money(s.ldf_base) %></td></tr>
+    <tr class="strong"><td>LDF = <%= s.ldf_percent.to_s("F").sub(/\.0\z/, "") %>% of tithes &amp; offerings</td><td><%= money(s.ldf) %></td></tr>
+    <tr><td>Tithes &amp; offerings after LDF</td><td><%= money(s.remittable) %></td></tr>
+  </table>
+
+  <h3>Cash position</h3>
+  <table class="summary-table">
+    <tr><td>Bank balance</td><td><%= s.bank_balance.nil? ? "—" : money(s.bank_balance) %></td></tr>
+    <tr><td>Petty cash <small class="muted">physical cash not in the bank</small></td><td><%= s.petty_cash.nil? ? "—" : money(s.petty_cash) %></td></tr>
+    <% if s.counted %>
+      <tr class="strong"><td>Bank + petty cash</td><td><%= money(s.counted) %></td></tr>
+      <tr>
+        <td>Difference to closing balance</td>
+        <td class="<%= s.difference.zero? ? 'ok' : 'warn' %>"><%= s.difference.zero? ? "✓ balanced" : money(s.difference) %></td>
+      </tr>
+    <% else %>
+      <tr><td colspan="2" class="muted">Enter the bank balance and the petty cash below to check the books balance.</td></tr>
+    <% end %>
+  </table>
+
+  <%= form_with model: @cash_month, url: cash_record_path(month: mp), method: :patch, class: "month-form noprint" do |f| %>
+    <div class="form-grid">
+      <label>Bank balance<%= f.text_field :bank_balance_text, inputmode: "decimal", placeholder: "e.g. 1.250,00" %></label>
+      <label>Petty cash<%= f.text_field :petty_cash_text, inputmode: "decimal", placeholder: "counted cash" %></label>
+      <label>Cash brought forward <small>(only for the first month — leave empty to carry forward automatically)</small>
+        <%= f.text_field :brought_forward_override_text, inputmode: "decimal" %></label>
+      <label class="wide">Notes<%= f.text_area :notes, rows: 2 %></label>
+    </div>
+    <%= f.submit "Save month figures", class: "btn primary" %>
+  <% end %>
+</section>
+
+<section class="card">
+  <h2><span>Weekly cash record</span><span class="muted">weeks by <%= Date::DAYNAMES[setting.collection_wday] %></span></h2>
+  <div class="scroll">
+    <table class="grid cash-grid">
+      <thead>
+        <tr><th class="name">Item</th><% days.each do |d| %><th><%= day_label(d) %></th><% end %><th class="tot">Month total</th></tr>
+      </thead>
+      <tbody>
+        <tr class="group"><td class="name" colspan="<%= days.size + 2 %>">Receipts</td></tr>
+        <% r.receipts_by_type.each do |type, weeks| %>
+          <tr>
+            <td class="name"><%= type.name %><%= " *" if type.counts_for_ldf %></td>
+            <% weeks.each do |c| %><td><%= money_plain(c) %></td><% end %>
+            <td class="tot"><%= money(weeks.sum) %></td>
+          </tr>
+        <% end %>
+        <tr>
+          <td class="name">Other income</td>
+          <% r.other_income_by_week.each do |c| %><td><%= money_plain(c) %></td><% end %>
+          <td class="tot"><%= money(r.other_income_by_week.sum) %></td>
+        </tr>
+        <tr class="subtotal">
+          <td class="name">Total receipts</td>
+          <% r.receipts_by_week.each do |c| %><td><%= money(c) %></td><% end %>
+          <td class="tot"><%= money(s.receipts) %></td>
+        </tr>
+
+        <tr class="group"><td class="name" colspan="<%= days.size + 2 %>">Payments</td></tr>
+        <% if r.expenses_by_category.empty? %>
+          <tr><td class="name muted" colspan="<%= days.size + 2 %>">No payments recorded this month.</td></tr>
+        <% end %>
+        <% r.expenses_by_category.each do |cat, weeks| %>
+          <tr>
+            <td class="name"><%= cat %></td>
+            <% weeks.each do |c| %><td><%= money_plain(c) %></td><% end %>
+            <td class="tot"><%= money(weeks.sum) %></td>
+          </tr>
+        <% end %>
+        <tr class="subtotal">
+          <td class="name">Total payments</td>
+          <% r.payments_by_week.each do |c| %><td><%= money(c) %></td><% end %>
+          <td class="tot"><%= money(s.payments) %></td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="name">Net for the week</td>
+          <% r.receipts_by_week.zip(r.payments_by_week).each do |rc, pc| %><td class="<%= signed_class(rc - pc) %>"><%= money(rc - pc) %></td><% end %>
+          <td class="tot"><%= money(s.receipts - s.payments) %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <p class="muted small">Tithe and offering rows come from the tithes &amp; offerings sheet automatically. * counts towards LDF.</p>
+</section>
+</div>
+
+<div class="two-col">
+  <section class="card">
+    <h2><span>Other income</span><span class="muted">e.g. loose plate offering, donations</span></h2>
+    <%= render "cash_entries/list", entries: r.income_entries, show_type: true %>
+    <%= render "cash_entries/form", entry: @new_income %>
+  </section>
+  <section class="card">
+    <h2><span>Payments / expenses</span></h2>
+    <%= render "cash_entries/list", entries: r.expense_entries, show_type: false %>
+    <%= render "cash_entries/form", entry: @new_expense %>
+  </section>
+</div>
